@@ -22,9 +22,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
-      - name: Install Playwright (package & browsers)
+      - name: Install Playwright
         run: |
           npm init -y
           npm install -D playwright
@@ -37,10 +37,10 @@ jobs:
           echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
 
           cat > screenshot.js << EOF
-          const { chromium } = require('playwright');
+          const { chromium } = require("playwright");
 
           (async () => {
-            const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+            const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
             const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 
             await page.goto(
@@ -50,7 +50,7 @@ jobs:
 
             await page.waitForTimeout(8000);
 
-            const filename = "dashboard-${process.env.TIMESTAMP}.png";
+            const filename = "dashboard-TIMESTAMP_TOKEN.png";
             await page.screenshot({ path: filename, fullPage: true });
 
             console.log("Saved screenshot:", filename);
@@ -58,10 +58,12 @@ jobs:
           })();
           EOF
 
+          sed -i "s/TIMESTAMP_TOKEN/$TIMESTAMP/" screenshot.js
+
           node screenshot.js
 
-          echo "dashboard-${TIMESTAMP}.png" > latest.txt
-          cp "dashboard-${TIMESTAMP}.png" "dashboard-latest.png"
+          echo "dashboard-$TIMESTAMP.png" > latest.txt
+          cp "dashboard-$TIMESTAMP.png" "dashboard-latest.png"
 
       - name: Commit screenshot
         env:
@@ -71,4 +73,4 @@ jobs:
           git config user.email "actions@github.com"
           git add dashboard-*.png dashboard-latest.png latest.txt
           git commit -m "Auto-update screenshot" || echo "No changes"
-          git push "https://x-access-token:${TOKEN}@github.com/JamesElemental/Reception-Dashboard.git"
+          git push "https://x-access-token:$TOKEN@github.com/JamesElemental/Reception-Dashboard.git"
