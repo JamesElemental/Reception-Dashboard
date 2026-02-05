@@ -11,10 +11,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Install Playwright Browsers
-        uses: microsoft/playwright-github-action@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Install Playwright (package) and its browsers on the runner
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm i -D playwright@latest
+          npx playwright install --with-deps chromium
 
       - name: Take screenshot
         run: |
@@ -22,15 +31,15 @@ jobs:
           const { chromium } = require('playwright');
 
           (async () => {
-            const browser = await chromium.launch({ headless: true });
-            const page = await browser.newPage({
-              viewport: { width: 1920, height: 3000 }
-            });
+            const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+            const page = await browser.newPage({ viewport: { width: 1920, height: 3000 } });
 
-            await page.goto("https://app.powerbi.com/view?r=eyJrIjoiY2E0NzNjOTktYzkxZC00N2NhLWJlY2YtMDgwNTFmZjUyOGNjIiwidCI6ImYxZDhiY2I0LTdlYTgtNDcxNC1iYmYzLTlhMzg5NzY0ZjM1MCJ9", {
-              waitUntil: "networkidle"
-            });
+            await page.goto(
+              "https://app.powerbi.com/view?r=eyJrIjoiY2E0NzNjOTktYzkxZC00N2NhLWJlY2YtMDgwNTFmZjUyOGNjIiwidCI6ImYxZDhiY2I0LTdlYTgtNDcxNC1iYmYzLTlhMzg5NzY0ZjM1MCJ9",
+              { waitUntil: "networkidle" }
+            );
 
+            // Give visuals time to render; increase to 12000 if first run is blank
             await page.waitForTimeout(8000);
 
             await page.screenshot({ path: "dashboard.png", fullPage: true });
@@ -41,9 +50,12 @@ jobs:
           node screenshot.js
 
       - name: Commit screenshot
+        env:
+          TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
+          git remote set-url origin https://$TOKEN@github.com/JamesElemental/Reception-Dashboard.git
           git add dashboard.png
           git commit -m "Auto-update screenshot" || echo "No changes"
           git push
