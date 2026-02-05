@@ -1,12 +1,11 @@
 name: Generate Power BI Screenshot
 
-# Give the built-in token write permissions so we can push without a PAT
 permissions:
   contents: write
 
 on:
   schedule:
-    - cron: "35 * * * *"   # run at :35 past every hour (UTC)
+    - cron: "35 * * * *"   # run at :35 past every hour
   workflow_dispatch:
 
 jobs:
@@ -34,17 +33,16 @@ jobs:
       - name: Take screenshot
         shell: bash
         run: |
-          # 1) Make a timestamp we can use in bash & Node
+          # 1) Make timestamp
           TIMESTAMP=$(date +"%Y%m%d-%H%M")
           echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
 
-          # 2) Write the Node script
-          cat > screenshot.js << 'EOF'
+          # 2) Create screenshot.js (IMPORTANT: no quotes on EOF)
+          cat > screenshot.js << EOF
           const { chromium } = require('playwright');
 
           (async () => {
             const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
-            // Use a true 16:9 viewport to avoid borders on TVs
             const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 
             await page.goto(
@@ -52,29 +50,30 @@ jobs:
               { waitUntil: "networkidle" }
             );
 
-            // Give visuals time to render; increase to 12000 if you ever see a blank/half image
+            // wait to fully render visuals
             await page.waitForTimeout(8000);
 
-            const filename = `dashboard-${process.env.TIMESTAMP}.png`;
+            const filename = "dashboard-${process.env.TIMESTAMP}.png";
             await page.screenshot({ path: filename, fullPage: true });
 
+            console.log("Saved screenshot:", filename);
             await browser.close();
           })();
           EOF
 
-          # 3) Run the capture
+          # 3) Run capture
           node screenshot.js
 
-          # 4) Record the newest filename and also keep a constant name for fallback
+          # 4) Save filename + fallback
           echo "dashboard-${TIMESTAMP}.png" > latest.txt
           cp "dashboard-${TIMESTAMP}.png" "dashboard-latest.png"
 
       - name: Commit screenshot
         env:
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}   # built-in token with contents: write
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add dashboard-*.png dashboard-latest.png latest.txt
-          git commit -m "Auto-update screenshot at :35" || echo "No changes"
+          git commit -m "Auto-update screenshot" || echo "No changes"
           git push "https://x-access-token:${TOKEN}@github.com/JamesElemental/Reception-Dashboard.git"
