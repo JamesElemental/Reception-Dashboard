@@ -2,23 +2,26 @@ name: Generate Power BI Screenshot
 
 on:
   schedule:
-    - cron: "*/35 * * * *"   # Every 30 minutes
+    - cron: "35 * * * *"   # run at :35 past every hour
   workflow_dispatch:
 
 jobs:
   screenshot:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # Install Playwright (package) and its browsers on the runner
+      # Install Playwright (package & browsers)
       - name: Install Playwright
         run: |
           npm init -y
@@ -27,11 +30,17 @@ jobs:
 
       - name: Take screenshot
         run: |
+          # 1) make a timestamp env var we can reuse in bash and node
+          TIMESTAMP=$(date +"%Y%m%d-%H%M")
+          echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
+
+          # 2) write the node script
           cat > screenshot.js << 'EOF'
           const { chromium } = require('playwright');
 
           (async () => {
             const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+            // Use a true 16:9 viewport to avoid borders on TVs
             const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 
             await page.goto(
@@ -39,23 +48,25 @@ jobs:
               { waitUntil: "networkidle" }
             );
 
-            // Give visuals time to render; increase to 12000 if first run is blank
+            // give visuals time; increase to 12000 if you ever see a blank/half image
             await page.waitForTimeout(8000);
 
-            await page.screenshot({ path: "dashboard.png", fullPage: true });
+            // 3) save with a unique, timestamped filename to defeat TV caching
+            const filename = `dashboard-${process.env.TIMESTAMP}.png`;
+            await page.screenshot({ path: filename, fullPage: true });
+
             await browser.close();
           })();
           EOF
 
+          # 4) run the node script
           node screenshot.js
+
+          # 5) record the newest filename so index.html can load it
+          echo "dashboard-${TIMESTAMP}.png" > latest.txt
 
       - name: Commit screenshot
         env:
           TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git remote set-url origin https://$TOKEN@github.com/JamesElemental/Reception-Dashboard.git
-          git add dashboard.png
-          git commit -m "Auto-update screenshot" || echo "No changes"
-          git push
