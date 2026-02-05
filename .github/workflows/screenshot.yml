@@ -11,15 +11,14 @@ on:
 jobs:
   screenshot:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -30,41 +29,61 @@ jobs:
           npm install -D playwright
           npx playwright install --with-deps chromium
 
-      - name: Take screenshot (no heredocs, no redirects)
+      - name: Screenshot (simple, stable, works)
         shell: bash
         run: |
           TS=$(date +"%Y%m%d-%H%M")
-          TIMESTAMP="$TS" node -e "
-          const { chromium } = require('playwright');
-          (async () => {
-            const t = process.env.TIMESTAMP;
-            const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 
-            // Wider + pushed back using deviceScaleFactor
+          node - << "END"
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const t = process.env.TS;
+            
+            const browser = await chromium.launch({
+              headless: true,
+              args: ["--no-sandbox"]
+            });
+
+            // ⭐ Adjust THIS to zoom in/out
             const page = await browser.newPage({
-              viewport: { width: 1920, height: 1000 },
+              viewport: { width: 1920, height: 1080 },
               deviceScaleFactor: 2
             });
 
             await page.goto(
-              'https://app.powerbi.com/view?r=eyJrIjoiY2E0NzNjOTktYzkxZC00N2NhLWJlY2YtMDgwNTFmZjUyOGNjIiwidCI6ImYxZDhiY2I0LTdlYTgtNDcxNC1iYmYzLTlhMzg5NzY0ZjM1MCJ9',
-              { waitUntil: 'networkidle' }
+              "https://app.powerbi.com/view?r=eyJrIjoiY2E0NzNjOTktYzkxZC00N2NhLWJlY2YtMDgwNTFmZjUyOGNjIiwidCI6ImYxZDhiY2I0LTdlYTgtNDcxNC1iYmYzLTlhMzg5NzY0ZjM1MCJ9",
+              { waitUntil: "networkidle" }
             );
 
             await page.waitForTimeout(12000);
-            await page.screenshot({ path: \`dashboard-\${t}.png\`, fullPage: false });
+
+            const filename = `dashboard-${t}.png`;
+            await page.screenshot({
+              path: filename,
+              fullPage: true
+            });
+
+            console.log("Saved:", filename);
             await browser.close();
           })();
-          "
-          echo "dashboard-$TS.png" > latest.txt
-          cp "dashboard-$TS.png" "dashboard-latest.png"
+          END
 
-      - name: Commit screenshot
+          # Make folder if missing
+          mkdir -p screenshots
+
+          # Move files
+          mv "dashboard-$TS.png" "screenshots/dashboard-$TS.png"
+          cp "screenshots/dashboard-$TS.png" "screenshots/dashboard-latest.png"
+
+          echo "dashboard-$TS.png" > screenshots/latest.txt
+
+      - name: Commit
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add dashboard-*.png dashboard-latest.png latest.txt
+          git add screenshots/*
           git commit -m "Auto-update screenshot" || echo "No changes"
           git push "https://x-access-token:${TOKEN}@github.com/JamesElemental/Reception-Dashboard.git"
