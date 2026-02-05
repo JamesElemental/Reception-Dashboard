@@ -4,38 +4,39 @@
   <meta charset="UTF-8" />
   <title>Reception Dashboard</title>
 
-  <!-- Reload the whole page every 35 minutes -->
+  <!-- Refresh page every 35 minutes -->
   <meta http-equiv="refresh" content="2100">
 
   <style>
-    html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
-    img { width: 100vw; height: 100vh; object-fit: cover; display: block; }
-    .stamp { position: fixed; right: 12px; bottom: 10px; color: #bbb; font: 12px Arial, sans-serif; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #000;
+      overflow: hidden;
+    }
+    img {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      display: block;
+    }
   </style>
 
   <script>
     async function loadLatest() {
       const img = document.getElementById('dash');
 
-      // 1. Show fallback instantly
-      img.src = 'dashboard-latest.png?cb=init';
+      // Show fallback immediately (prevents black screen)
+      img.src = 'dashboard-latest.png?cb=' + Date.now();
 
       try {
-        // 2. Get latest screenshot filename
         const txt = await fetch('latest.txt', { cache: 'no-store' }).then(r => r.text());
-        const file = txt.trim(); // e.g. dashboard-20260205-1535.png
+        const file = txt.trim(); // e.g. dashboard-20260205-1330.png
 
-        const match = file.match(/(\d{8}-\d{4})/);
-        const cb = match ? match[1] : Date.now();
-
-        // 3. Load the newest screenshot (TV cannot cache this)
-        img.src = `${file}?cb=${cb}`;
-
-        const stamp = document.getElementById('ts');
-        if (stamp && match) stamp.textContent = `Updated: ${match[1]}`;
-
-      } catch (e) {
-        // fallback stays
+        // Force fresh load
+        img.src = `${file}?cb=${Date.now()}`;
+      } catch(e) {
+        // If latest.txt fails, fallback image stays
       }
 
       img.onerror = () => {
@@ -46,6 +47,5 @@
 </head>
 <body onload="loadLatest()">
   <img id="dash" alt="Dashboard">
-  <div class="stamp" id="ts"></div>
 </body>
 </html>
