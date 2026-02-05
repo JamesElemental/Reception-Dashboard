@@ -25,52 +25,60 @@ jobs:
 
       - name: Install Playwright
         run: |
+          set -e
           npm init -y
           npm install -D playwright
           npx playwright install --with-deps chromium
 
       - name: Screenshot
         run: |
+          set -e
           TS=$(date -u +"%Y%m%d-%H%M")
           mkdir -p screenshots
 
-          echo "
+          # Write Node script without needing to escape anything
+          cat > script.js <<'JS'
           const { chromium } = require('playwright');
 
           (async () => {
-            const t = '$TS';
+            const t = process.env.TS;
 
             const browser = await chromium.launch({
               headless: true,
-              args: ['--no-sandbox']
+              args: [
+                '--no-sandbox',
+                '--force-device-scale-factor=1.75',
+                '--high-dpi-support=1'
+              ]
             });
 
             const page = await browser.newPage({
               viewport: { width: 2100, height: 1180 },
-              deviceScaleFactor: 1, // <- Fix zoomed-in issue
+              deviceScaleFactor: 1.75,
               isMobile: false
             });
 
-            // Load the Power BI dashboard
             await page.goto(
               'https://app.powerbi.com/view?r=eyJrIjoiY2E0NzNjOTktYzkxZC00N2NhLWJlY2YtMDgwNTFmZjUyOGNjIiwidCI6ImYxZDhiY2I0LTdlYTgtNDcxNC1iYmYzLTlhMzg5NzY0ZjM1MCJ9',
               { waitUntil: 'domcontentloaded' }
             );
 
-            // Power BI can take time to fully render
+            // Allow Power BI visual render
             await page.waitForTimeout(35000);
 
-            // Screenshot
             await page.screenshot({
-              path: 'screenshots/dashboard-' + t + '.png',
-              fullPage: true
+              path: `screenshots/dashboard-${t}.png`
             });
 
             await browser.close();
-          })();
-          " > script.js
+          })().catch(e => {
+            console.error(e);
+            process.exit(1);
+          });
+          JS
 
-          node script.js
+          # Run the script with TS exported into the environment
+          TS="$TS" node script.js
 
           cp "screenshots/dashboard-$TS.png" "screenshots/dashboard-latest.png"
           echo "dashboard-$TS.png" > screenshots/latest.txt
@@ -79,11 +87,9 @@ jobs:
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-
-          # Force-add any changed or unchanged screenshots
           git add -A screenshots
-
           git commit -m "Update screenshot" || echo "No changes"
           git push "https://x-access-token:${TOKEN}@github.com/JamesElemental/Reception-Dashboard.git"
