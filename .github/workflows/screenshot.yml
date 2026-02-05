@@ -32,7 +32,7 @@ jobs:
 
           (async () => {
             const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
-            const page = await browser.newPage({ viewport: { width: 1920, height: 3000 } });
+            const page = await browser.newPage({ viewport: { width: 1920, height: 1500 } });
 
             await page.goto(
               "https://app.powerbi.com/view?r=eyJrIjoiY2E0NzNjOTktYzkxZC00N2NhLWJlY2YtMDgwNTFmZjUyOGNjIiwidCI6ImYxZDhiY2I0LTdlYTgtNDcxNC1iYmYzLTlhMzg5NzY0ZjM1MCJ9",
