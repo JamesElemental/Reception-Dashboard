@@ -5,7 +5,7 @@ permissions:
 
 on:
   schedule:
-    - cron: "35 * * * *"   # run at :35 past every hour
+    - cron: "35 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -27,17 +27,15 @@ jobs:
       - name: Install Playwright (package & browsers)
         run: |
           npm init -y
-          npm i -D playwright@latest
+          npm install -D playwright
           npx playwright install --with-deps chromium
 
       - name: Take screenshot
         shell: bash
         run: |
-          # 1) Make timestamp
           TIMESTAMP=$(date +"%Y%m%d-%H%M")
           echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
 
-          # 2) Create screenshot.js (IMPORTANT: no quotes on EOF)
           cat > screenshot.js << EOF
           const { chromium } = require('playwright');
 
@@ -50,7 +48,6 @@ jobs:
               { waitUntil: "networkidle" }
             );
 
-            // wait to fully render visuals
             await page.waitForTimeout(8000);
 
             const filename = "dashboard-${process.env.TIMESTAMP}.png";
@@ -61,10 +58,8 @@ jobs:
           })();
           EOF
 
-          # 3) Run capture
           node screenshot.js
 
-          # 4) Save filename + fallback
           echo "dashboard-${TIMESTAMP}.png" > latest.txt
           cp "dashboard-${TIMESTAMP}.png" "dashboard-latest.png"
 
