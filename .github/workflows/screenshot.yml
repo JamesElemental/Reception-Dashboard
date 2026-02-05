@@ -47,7 +47,7 @@ jobs:
 
             const page = await browser.newPage({
               viewport: { width: 2100, height: 1180 },
-              deviceScaleFactor: 6, // <- Fix zoomed-in issue
+              deviceScaleFactor: 1, // <- Fix zoomed-in issue
               isMobile: false
             });
 
