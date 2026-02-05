@@ -1,36 +1,4 @@
-name: Generate Power BI Screenshot
-
-permissions:
-  contents: write
-
-on:
-  schedule:
-    - cron: "35 * * * *"   # :35 past each hour (UTC)
-  workflow_dispatch:
-
-jobs:
-  screenshot:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install Playwright
-        run: |
-          npm init -y
-          npm install -D playwright
-          npx playwright install --with-deps chromium
-
-      - name: Screenshot (simple)
+- name: Screenshot (simple)
         shell: bash
         run: |
           TS=$(date -u +"%Y%m%d-%H%M")
@@ -47,10 +15,9 @@ jobs:
               args: ['--no-sandbox']
             });
 
-            // Zoom-out / “pushed back”
+            // PERFECT Power BI viewport (fixes clipping)
             const page = await browser.newPage({
-              viewport: { width: 1920, height: 1000 },
-              deviceScaleFactor: 2
+              viewport: { width: 1920, height: 1080 }
             });
 
             await page.goto(
@@ -58,28 +25,23 @@ jobs:
               { waitUntil: 'networkidle' }
             );
 
-            await page.waitForTimeout(12000);
+            // allow visuals to fully settle
+            await page.waitForTimeout(15000);
 
-            const fn = `dashboard-${t}.png`;
-            await page.screenshot({ path: fn, fullPage: true });
-            console.log('Saved:', fn);
+            const output = `dashboard-${t}.png`;
+
+            await page.screenshot({
+              path: output,
+              fullPage: true
+            });
+
+            console.log("Saved:", output);
 
             await browser.close();
           })();
           END
 
-          # Ensure folder exists and move outputs there
           mkdir -p screenshots
           mv "dashboard-$TS.png" "screenshots/dashboard-$TS.png"
           cp "screenshots/dashboard-$TS.png" "screenshots/dashboard-latest.png"
           echo "dashboard-$TS.png" > screenshots/latest.txt
-
-      - name: Commit
-        env:
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add screenshots/*
-          git commit -m "Auto-update screenshot" || echo "No changes"
-          git push "https://x-access-token:${TOKEN}@github.com/JamesElemental/Reception-Dashboard.git"
