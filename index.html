@@ -4,29 +4,46 @@
   <meta charset="UTF-8" />
   <title>Reception Dashboard</title>
 
-  <!-- Reload page every 35 minutes -->
+  <!-- Reload the whole page every 35 minutes (2100 seconds) -->
   <meta http-equiv="refresh" content="2100">
 
   <style>
     html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
     img { width: 100vw; height: 100vh; object-fit: cover; display: block; }
+    .stamp { position: fixed; right: 12px; bottom: 10px; color: #bbb; font: 12px Arial, sans-serif; }
   </style>
 
   <script>
     async function loadLatest() {
+      const img = document.getElementById('dash');
+
+      // 1) Show a guaranteed image immediately (prevents black screen if JS is slow/blocked)
+      img.src = 'dashboard-latest.png?cb=init';
+
       try {
-        const txt = await fetch('latest.txt', { cache: 'no-store' }).then(r => r.text());
-        const file = txt.trim();
-        // Add a cache-buster on the image URL too, just in case a TV caches aggressively
-        const cb = Date.now();
-        document.getElementById('dash').src = `${file}?cb=${cb}`;
+        // 2) Fetch the exact newest filename and switch to it (defeats TV caching)
+        const latest = await fetch('latest.txt', { cache: 'no-store' }).then(r => r.text());
+        const file = latest.trim();                       // e.g., dashboard-20260205-1535.png
+        const match = file.match(/(\d{8}-\d{4})/);
+        const cb = match ? match[1] : Date.now();
+        img.src = `${file}?cb=${cb}`;
+
+        // Optional: show "Updated: YYYYMMDD-HHMM" in the corner
+        const ts = document.getElementById('ts');
+        if (ts && match) ts.textContent = `Updated: ${match[1]}`;
       } catch (e) {
-        console.error('Failed to load latest.txt', e);
+        // If latest.txt can't be read, we keep dashboard-latest.png on screen
+        // console.warn('latest.txt fetch failed', e);
       }
+
+      // Safety: if image fails, fall back to constant file again
+      img.onerror = () => { img.src = 'dashboard-latest.png?cb=' + Date.now(); };
     }
+    window.onload = loadLatest;
   </script>
 </head>
-<body onload="loadLatest()">
+<body>
   <img id="dash" alt="Dashboard">
+  <div class="stamp" id="ts"></div>
 </body>
 </html>
