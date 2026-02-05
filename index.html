@@ -1,28 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Reception Dashboard</title>
 
-  <!-- Refresh every 35 minutes (2100 seconds) -->
+  <!-- Reload page every 35 minutes -->
   <meta http-equiv="refresh" content="2100">
 
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: #000;
-      overflow: hidden;
-    }
-    img {
-      width: 100vw;
-      height: 100vh;
-      object-fit: contain;
-      display: block;
-    }
+    html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
+    img { width: 100vw; height: 100vh; object-fit: cover; display: block; }
   </style>
+
+  <script>
+    async function loadLatest() {
+      try {
+        const txt = await fetch('latest.txt', { cache: 'no-store' }).then(r => r.text());
+        const file = txt.trim();
+        // Add a cache-buster on the image URL too, just in case a TV caches aggressively
+        const cb = Date.now();
+        document.getElementById('dash').src = `${file}?cb=${cb}`;
+      } catch (e) {
+        console.error('Failed to load latest.txt', e);
+      }
+    }
+  </script>
 </head>
-<body>
-  <img src="dashboard.png?cachebust=<script>document.write(Date.now())</script>" alt="Dashboard">
+<body onload="loadLatest()">
+  <img id="dash" alt="Dashboard">
 </body>
 </html>
