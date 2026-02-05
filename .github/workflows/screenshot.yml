@@ -1,89 +1,40 @@
-name: Generate Power BI Screenshot
-
-permissions:
-  contents: write
-
-on:
-  schedule:
-    - cron: "35 * * * *"
-  workflow_dispatch:
-
-jobs:
-  screenshot:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install Playwright
-        run: |
-          npm init -y
-          npm install -D playwright
-          npx playwright install --with-deps chromium
-
-      - name: Screenshot (simple, stable, works)
+- name: Take screenshot (no heredocs, no redirects)
         shell: bash
         run: |
           TS=$(date +"%Y%m%d-%H%M")
 
-          node - << "END"
+          node -e "
           const { chromium } = require('playwright');
-
           (async () => {
             const t = process.env.TS;
-            
+
             const browser = await chromium.launch({
               headless: true,
-              args: ["--no-sandbox"]
+              args: ['--no-sandbox']
             });
 
-            // ⭐ Adjust THIS to zoom in/out
+            // Zoom-out (pushed back, wider)
             const page = await browser.newPage({
-              viewport: { width: 1920, height: 1080 },
+              viewport: { width: 1920, height: 1000 },
               deviceScaleFactor: 2
             });
 
             await page.goto(
-              "https://app.powerbi.com/view?r=eyJrIjoiY2E0NzNjOTktYzkxZC00N2NhLWJlY2YtMDgwNTFmZjUyOGNjIiwidCI6ImYxZDhiY2I0LTdlYTgtNDcxNC1iYmYzLTlhMzg5NzY0ZjM1MCJ9",
-              { waitUntil: "networkidle" }
+              'https://app.powerbi.com/view?r=eyJrIjoiY2E0NzNjOTktYzkxZC00N2NhLWJlY2YtMDgwNTFmZjUyOGNjIiwidCI6ImYxZDhiY2I0LTdlYTgtNDcxNC1iYmYzLTlhMzg5NzY0ZjM1MCJ9',
+              { waitUntil: 'networkidle' }
             );
 
             await page.waitForTimeout(12000);
 
-            const filename = `dashboard-${t}.png`;
-            await page.screenshot({
-              path: filename,
-              fullPage: true
-            });
+            const filename = 'dashboard-' + t + '.png';
+            await page.screenshot({ path: filename, fullPage: false });
 
-            console.log("Saved:", filename);
+            console.log('Saved:', filename);
             await browser.close();
           })();
-          END
+          " TS=$TS
 
-          # Make folder if missing
           mkdir -p screenshots
-
-          # Move files
           mv "dashboard-$TS.png" "screenshots/dashboard-$TS.png"
           cp "screenshots/dashboard-$TS.png" "screenshots/dashboard-latest.png"
-
           echo "dashboard-$TS.png" > screenshots/latest.txt
-
-      - name: Commit
-        env:
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add screenshots/*
-          git commit -m "Auto-update screenshot" || echo "No changes"
-          git push "https://x-access-token:${TOKEN}@github.com/JamesElemental/Reception-Dashboard.git"
