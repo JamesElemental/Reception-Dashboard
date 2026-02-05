@@ -2,7 +2,7 @@ name: Generate Power BI Screenshot
 
 on:
   schedule:
-    - cron: "*/30 * * * *"   # Every 30 minutes
+    - cron: "*/35 * * * *"   # Every 30 minutes
   workflow_dispatch:
 
 jobs:
