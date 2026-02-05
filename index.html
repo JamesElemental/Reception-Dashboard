@@ -3,49 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <title>Reception Dashboard</title>
-
   <!-- Refresh page every 35 minutes -->
   <meta http-equiv="refresh" content="2100">
-
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: #000;
-      overflow: hidden;
-    }
-    img {
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      display: block;
-    }
+    html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
+    img { width: 100vw; height: 100vh; object-fit: cover; display: block; }
   </style>
-
   <script>
     async function loadLatest() {
       const img = document.getElementById('dash');
-
-      // Show fallback immediately (prevents black screen)
+      // show fallback immediately
       img.src = 'dashboard-latest.png?cb=' + Date.now();
-
       try {
         const txt = await fetch('latest.txt', { cache: 'no-store' }).then(r => r.text());
-        const file = txt.trim(); // e.g. dashboard-20260205-1330.png
-
-        // Force fresh load
-        img.src = `${file}?cb=${Date.now()}`;
-      } catch(e) {
-        // If latest.txt fails, fallback image stays
+        const file = txt.trim();
+        img.src = file + '?cb=' + Date.now(); // force TV to fetch fresh file
+      } catch (e) {
+        // keep fallback
       }
-
-      img.onerror = () => {
-        img.src = 'dashboard-latest.png?cb=' + Date.now();
-      };
+      img.onerror = () => { img.src = 'dashboard-latest.png?cb=' + Date.now(); };
     }
+    window.onload = loadLatest;
   </script>
 </head>
-<body onload="loadLatest()">
+<body>
   <img id="dash" alt="Dashboard">
 </body>
 </html>
