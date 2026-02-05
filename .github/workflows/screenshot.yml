@@ -34,13 +34,14 @@ jobs:
         shell: bash
         run: |
           TIMESTAMP=$(date +"%Y%m%d-%H%M")
-          echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
+          echo "TIMESTAMP=_TS_$TIMESTAMP" >> $GITHUB_ENV
 
           cat > screenshot.js << EOF
           const { chromium } = require("playwright");
           const sharp = require("sharp");
 
           (async () => {
+            const timestamp = process.env.TIMESTAMP.replace("_TS_", "");
             const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
             const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 
@@ -49,28 +50,29 @@ jobs:
               { waitUntil: "networkidle" }
             );
 
-            await page.waitForTimeout(12000); // let Power BI settle
+            await page.waitForTimeout(12000);
 
-            // full screenshot
             const fullPath = "full.png";
             await page.screenshot({ path: fullPath, fullPage: true });
 
-            // crop AUTO based on bounding box of the report container
-            const box = await page.$eval("body", () => {
-              const e = document.querySelector("div.report") || document.body;
-              const rect = e.getBoundingClientRect();
-              return { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
-            }).catch(() => null);
+            const output = `dashboard-${timestamp}.png`;
 
-            const output = "dashboard-${process.env.TIMESTAMP}.png";
+            try {
+              const box = await page.$eval("body", () => {
+                const e = document.querySelector("div.report") || document.body;
+                const r = e.getBoundingClientRect();
+                return { x: r.left, y: r.top, width: r.width, height: r.height };
+              });
 
-            if (box) {
               await sharp(fullPath)
-                .extract({ left: Math.round(box.x), top: Math.round(box.y),
-                           width: Math.round(box.width), height: Math.round(box.height) })
+                .extract({
+                  left: Math.round(box.x),
+                  top: Math.round(box.y),
+                  width: Math.round(box.width),
+                  height: Math.round(box.height)
+                })
                 .toFile(output);
-            } else {
-              // fallback if selector fails
+            } catch {
               await sharp(fullPath).toFile(output);
             }
 
@@ -79,12 +81,10 @@ jobs:
           })();
           EOF
 
-          sed -i "s/TIMESTAMP_TOKEN/$TIMESTAMP/" screenshot.js
-
           node screenshot.js
 
           echo "dashboard-$TIMESTAMP.png" > latest.txt
-          cp "dashboard-$TIMESTAMP.png" "dashboard-latest.png"
+          cp "dashboard-_TS_$TIMESTAMP.png" "dashboard-latest.png"
 
       - name: Commit screenshot
         env:
