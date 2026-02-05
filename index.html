@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>Reception Dashboard</title>
-  <!-- Refresh page every 35 minutes -->
   <meta http-equiv="refresh" content="2100">
   <style>
     html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
@@ -13,15 +12,14 @@
     async function loadLatest() {
       const img = document.getElementById('dash');
       // show fallback immediately
-      img.src = 'dashboard-latest.png?cb=' + Date.now();
+      img.src = 'screenshots/dashboard-latest.png?cb=' + Date.now();
       try {
-        const txt = await fetch('latest.txt', { cache: 'no-store' }).then(r => r.text());
-        const file = txt.trim();
-        img.src = file + '?cb=' + Date.now(); // force TV to fetch fresh file
+        const txt = await fetch('screenshots/latest.txt', { cache: 'no-store' }).then(r => r.text());
+        img.src = 'screenshots/' + txt.trim() + '?cb=' + Date.now();
       } catch (e) {
         // keep fallback
       }
-      img.onerror = () => { img.src = 'dashboard-latest.png?cb=' + Date.now(); };
+      img.onerror = () => { img.src = 'screenshots/dashboard-latest.png?cb=' + Date.now(); };
     }
     window.onload = loadLatest;
   </script>
@@ -30,3 +28,4 @@
   <img id="dash" alt="Dashboard">
 </body>
 </html>
+
