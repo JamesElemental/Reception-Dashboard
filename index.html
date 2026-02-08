@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Reception Dashboard</title>
   <meta http-equiv="refresh" content="2100">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
     html, body {
@@ -13,44 +14,33 @@
       overflow: hidden;
     }
 
-    /* Centers the image without zooming or cropping */
-    body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    img {
-      max-width: 100vw;
-      max-height: 100vh;
-      width: auto;
-      height: auto;
-      object-fit: contain;   /* <-- FIXES the zoomed-in issue */
-      display: block;
-      background: #000;
+    /* Fullscreen background image */
+    #dash {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      background-size: contain;  /* <-- Shows all of the image, no zoom */
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-color: #000;    /* filler behind transparency */
     }
   </style>
 
   <script>
     async function loadLatest() {
-      const img = document.getElementById('dash');
+      const bg = document.getElementById('dash');
       const cb = () => '?cb=' + Date.now();
 
-      // Load fallback immediately (with cache-buster)
-      img.src = 'screenshots/dashboard-latest.png' + cb();
+      // Load fallback immediately
+      bg.style.backgroundImage = 'url("screenshots/dashboard-latest.png' + cb() + '")';
 
       try {
-        // Load latest.txt (with cache-buster)
-        const txt = await fetch('screenshots/latest.txt' + cb(), { cache: 'no-store' })
-                          .then(r => r.text());
-        img.src = 'screenshots/' + txt.trim() + cb();
+        const txt = await fetch('screenshots/latest.txt' + cb(), { cache: 'no-store' }).then(r => r.text());
+        bg.style.backgroundImage = 'url("screenshots/' + txt.trim() + cb() + '")';
       } catch (e) {
-        // Ignore and keep fallback
+        // ignore
       }
-
-      img.onerror = () => {
-        img.src = 'screenshots/dashboard-latest.png' + cb();
-      };
     }
 
     window.onload = loadLatest;
@@ -58,8 +48,6 @@
 
 </head>
 <body>
-  <img id="dash" alt="Dashboard">
+  <div id="dash"></div>
 </body>
 </html>
-
-
