@@ -18,12 +18,12 @@
     #dash {
       position: fixed;
       inset: 0;
-      width: 100vw;
-      height: 100vh;
-      background-size: contain;  /* <-- Shows all of the image, no zoom */
+      width: 100dvw;            /* dynamic viewport units handle browser UI quirks */
+      height: 100dvh;
+      background-size: cover;   /* <-- CHANGE: removes black borders */
       background-repeat: no-repeat;
       background-position: center center;
-      background-color: #000;    /* filler behind transparency */
+      background-color: #000;   /* filler behind any transparency */
     }
   </style>
 
@@ -39,15 +39,15 @@
         const txt = await fetch('screenshots/latest.txt' + cb(), { cache: 'no-store' }).then(r => r.text());
         bg.style.backgroundImage = 'url("screenshots/' + txt.trim() + cb() + '")';
       } catch (e) {
-        // ignore
+        // ignore and keep fallback
       }
     }
 
     window.onload = loadLatest;
   </script>
-
 </head>
 <body>
   <div id="dash"></div>
 </body>
 </html>
+``
