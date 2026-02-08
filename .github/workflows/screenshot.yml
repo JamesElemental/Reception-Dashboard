@@ -36,7 +36,7 @@ jobs:
           TS=$(date -u +"%Y%m%d-%H%M")
           mkdir -p screenshots
 
-          # Write Node script without needing to escape anything
+          # Write Node script cleanly (no HTML entities)
           cat > script.js <<'JS'
           const { chromium } = require('playwright');
 
@@ -47,14 +47,14 @@ jobs:
               headless: true,
               args: [
                 '--no-sandbox',
-                '--force-device-scale-factor=1.75',
+                '--force-device-scale-factor=1', // DPR 1:1 for 1920x1080
                 '--high-dpi-support=1'
               ]
             });
 
             const page = await browser.newPage({
-              viewport: { width: 2100, height: 1180 },
-              deviceScaleFactor: 1.75,
+              viewport: { width: 1920, height: 1080 }, // <-- EXACT match to your display
+              deviceScaleFactor: 1,
               isMobile: false
             });
 
@@ -63,8 +63,8 @@ jobs:
               { waitUntil: 'domcontentloaded' }
             );
 
-            // Allow Power BI visual render
-            await page.waitForTimeout(35000);
+            // Allow Power BI visuals to render fully
+            await page.waitForTimeout(40000);
 
             await page.screenshot({
               path: `screenshots/dashboard-${t}.png`
@@ -77,9 +77,10 @@ jobs:
           });
           JS
 
-          # Run the script with TS exported into the environment
+          # Run the script with the timestamp available to Node
           TS="$TS" node script.js
 
+          # Update convenience files
           cp "screenshots/dashboard-$TS.png" "screenshots/dashboard-latest.png"
           echo "dashboard-$TS.png" > screenshots/latest.txt
 
