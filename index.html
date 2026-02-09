@@ -17,9 +17,9 @@
     #dash {
       position: fixed;
       inset: 0;
-      width: 100dvw;            /* dynamic viewport units handle browser UI quirks */
+      width: 100dvw;
       height: 100dvh;
-      background-size: cover;   /* fills screen, no borders */
+      background-size: cover;   /* fills screen */
       background-repeat: no-repeat;
       background-position: center center;
       background-color: #000;
@@ -31,13 +31,15 @@
       const bg = document.getElementById('dash');
       const cb = () => '?cb=' + Date.now();
 
-      // Show fallback immediately
-      bg.style.backgroundImage = 'url("screenshots/dashboard-latest.png' + cb() + '")';
+      // fallback first
+      bg.style.backgroundImage =
+        'url("screenshots/dashboard-latest.png' + cb() + '")';
 
       try {
         const txt = await fetch('screenshots/latest.txt' + cb(), { cache: 'no-store' })
                           .then(r => r.text());
-        bg.style.backgroundImage = 'url("screenshots/' + txt.trim() + cb() + '")';
+        bg.style.backgroundImage =
+          'url("screenshots/' + txt.trim() + cb() + '")';
       } catch (e) {
         // keep fallback
       }
@@ -46,9 +48,8 @@
     window.onload = () => {
       loadLatest();
 
-      // 🔄 Refresh the image every 15 minutes (900000 ms)
-      // This does NOT trigger extra GitHub Actions runs
-      setInterval(loadLatest, 900000);
+      // ✔ THIS is the 15-minute refresh
+      setInterval(loadLatest, 900000); // 15 minutes = 900k ms
     };
   </script>
 </head>
