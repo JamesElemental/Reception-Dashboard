@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>Reception Dashboard</title>
-  <meta http-equiv="refresh" content="2100">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
@@ -20,10 +19,10 @@
       inset: 0;
       width: 100dvw;            /* dynamic viewport units handle browser UI quirks */
       height: 100dvh;
-      background-size: cover;   /* <-- CHANGE: removes black borders */
+      background-size: cover;   /* fills screen, no borders */
       background-repeat: no-repeat;
       background-position: center center;
-      background-color: #000;   /* filler behind any transparency */
+      background-color: #000;
     }
   </style>
 
@@ -32,22 +31,28 @@
       const bg = document.getElementById('dash');
       const cb = () => '?cb=' + Date.now();
 
-      // Load fallback immediately
+      // Show fallback immediately
       bg.style.backgroundImage = 'url("screenshots/dashboard-latest.png' + cb() + '")';
 
       try {
-        const txt = await fetch('screenshots/latest.txt' + cb(), { cache: 'no-store' }).then(r => r.text());
+        const txt = await fetch('screenshots/latest.txt' + cb(), { cache: 'no-store' })
+                          .then(r => r.text());
         bg.style.backgroundImage = 'url("screenshots/' + txt.trim() + cb() + '")';
       } catch (e) {
-        // ignore and keep fallback
+        // keep fallback
       }
     }
 
-    window.onload = loadLatest;
+    window.onload = () => {
+      loadLatest();
+
+      // 🔄 Refresh the image every 15 minutes (900000 ms)
+      // This does NOT trigger extra GitHub Actions runs
+      setInterval(loadLatest, 900000);
+    };
   </script>
 </head>
 <body>
   <div id="dash"></div>
 </body>
 </html>
-``
