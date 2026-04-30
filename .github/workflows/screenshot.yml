@@ -5,7 +5,7 @@ permissions:
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/2 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -39,7 +39,6 @@ jobs:
 
           mkdir -p screenshots
 
-          # Write Node script cleanly
           cat > script.js <<'JS'
           const { chromium } = require('playwright');
 
