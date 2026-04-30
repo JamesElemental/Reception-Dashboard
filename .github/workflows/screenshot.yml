@@ -15,6 +15,22 @@ jobs:
 
     steps:
       - name: Checkout
+        uses: actions/checkout@v4name: PowerBI Screenshot
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # Every 2 hours (reliable)
+  workflow_dispatch:
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -31,15 +47,13 @@ jobs:
           npm install -D playwright
           npx playwright install --with-deps chromium
 
-      - name: Screenshot
+      - name: Screenshot loop
         run: |
           set -e
 
-          # UK DATE FORMAT (DD-MM-YYYY_HH-MM)
-          TS=$(date -u +"%d-%m-%Y_%H-%M")
-
           mkdir -p screenshots
 
+          # Write Node script once
           cat > script.js <<'JS'
           const { chromium } = require('playwright');
 
@@ -83,10 +97,21 @@ jobs:
           });
           JS
 
-          TS="$TS" node script.js
+          # Take 8 screenshots, 15 minutes apart
+          for i in 1 2 3 4 5 6 7 8; do
+            TS=$(date -u +"%d-%m-%Y_%H-%M")
+            echo "📸 Screenshot $i at $TS"
 
-          cp "screenshots/dashboard-$TS.png" "screenshots/dashboard-latest.png"
-          echo "dashboard-$TS.png" > screenshots/latest.txt
+            TS="$TS" node script.js
+
+            cp "screenshots/dashboard-$TS.png" "screenshots/dashboard-latest.png"
+            echo "dashboard-$TS.png" > screenshots/latest.txt
+
+            # Sleep 15 minutes unless last iteration
+            if [ "$i" -lt 8 ]; then
+              sleep 900
+            fi
+          done
 
       - name: Commit output
         env:
@@ -96,5 +121,5 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add -A screenshots
-          git commit -m "Update screenshot" || echo "No changes"
+          git commit -m "Update screenshots" || echo "No changes"
           git push "https://x-access-token:${TOKEN}@github.com/JamesElemental/Reception-Dashboard.git"
