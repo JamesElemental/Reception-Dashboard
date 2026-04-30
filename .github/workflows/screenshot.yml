@@ -5,23 +5,6 @@ permissions:
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
-    
-  workflow_dispatch:
-
-jobs:
-  screenshot:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4name: PowerBI Screenshot
-
-permissions:
-  contents: write
-
-on:
-  schedule:
     - cron: "0 */2 * * *"   # Every 2 hours (reliable)
   workflow_dispatch:
 
@@ -50,10 +33,8 @@ jobs:
       - name: Screenshot loop
         run: |
           set -e
-
           mkdir -p screenshots
 
-          # Write Node script once
           cat > script.js <<'JS'
           const { chromium } = require('playwright');
 
@@ -62,12 +43,7 @@ jobs:
 
             const browser = await chromium.launch({
               headless: true,
-              args: [
-                '--no-sandbox',
-                '--force-device-scale-factor=1',
-                '--high-dpi-support=1',
-                '--lang=en-GB'
-              ]
+              args: ['--no-sandbox', '--lang=en-GB']
             });
 
             const context = await browser.newContext({
@@ -77,13 +53,11 @@ jobs:
             });
 
             const page = await context.newPage();
-
             await page.goto(
               'https://app.powerbi.com/view?r=eyJrIjoiY2E0NzNjOTktYzkxZC00N2NhLWJlY2YtMDgwNTFmZjUyOGNjIiwidCI6ImYxZDhiY2I0LTdlYTgtNDcxNC1iYmYzLTlhMzg5NzY0ZjM1MCJ9',
               { waitUntil: 'domcontentloaded' }
             );
 
-            // Allow Power BI visuals to render
             await page.waitForTimeout(40000);
 
             await page.screenshot({
@@ -97,7 +71,7 @@ jobs:
           });
           JS
 
-          # Take 8 screenshots, 15 minutes apart
+          # 8 screenshots, 15 minutes apart (2 hours total)
           for i in 1 2 3 4 5 6 7 8; do
             TS=$(date -u +"%d-%m-%Y_%H-%M")
             echo "📸 Screenshot $i at $TS"
@@ -107,7 +81,6 @@ jobs:
             cp "screenshots/dashboard-$TS.png" "screenshots/dashboard-latest.png"
             echo "dashboard-$TS.png" > screenshots/latest.txt
 
-            # Sleep 15 minutes unless last iteration
             if [ "$i" -lt 8 ]; then
               sleep 900
             fi
@@ -117,7 +90,6 @@ jobs:
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add -A screenshots
