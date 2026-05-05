@@ -34,7 +34,7 @@ jobs:
           npm install -D playwright
           npx playwright install --with-deps chromium
 
-      - name: Screenshot loop (commit every run)
+      - name: Screenshot loop (update every 15 minutes)
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -65,6 +65,7 @@ jobs:
               { waitUntil: 'domcontentloaded' }
             );
 
+            // Allow Power BI visuals to render
             await page.waitForTimeout(40000);
 
             await page.screenshot({
@@ -81,7 +82,7 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
-          # 8 screenshots, 15 minutes apart
+          # 8 screenshots, 15 minutes apart (2 hours total)
           for i in 1 2 3 4 5 6 7 8; do
             TS=$(date -u +"%d-%m-%Y_%H-%M")
             echo "📸 Screenshot $i at $TS"
