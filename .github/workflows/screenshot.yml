@@ -3,6 +3,10 @@ name: PowerBI Screenshot
 permissions:
   contents: write
 
+concurrency:
+  group: powerbi-screenshot
+  cancel-in-progress: true
+
 on:
   schedule:
     - cron: "0 */2 * * *"   # Every 2 hours (UTC)
@@ -30,12 +34,13 @@ jobs:
           npm install -D playwright
           npx playwright install --with-deps chromium
 
-      - name: Screenshot loop
+      - name: Screenshot loop (commit every run)
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           mkdir -p screenshots
 
-          # Write Node script once
           cat > script.js <<'JS'
           const { chromium } = require('playwright');
 
@@ -60,7 +65,6 @@ jobs:
               { waitUntil: 'domcontentloaded' }
             );
 
-            // Allow Power BI visuals to render
             await page.waitForTimeout(40000);
 
             await page.screenshot({
@@ -68,13 +72,16 @@ jobs:
             });
 
             await browser.close();
-          })().catch(e => {
-            console.error(e);
+          })().catch(err => {
+            console.error(err);
             process.exit(1);
           });
           JS
 
-          # Take 8 screenshots, 15 minutes apart (2 hours total)
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # 8 screenshots, 15 minutes apart
           for i in 1 2 3 4 5 6 7 8; do
             TS=$(date -u +"%d-%m-%Y_%H-%M")
             echo "📸 Screenshot $i at $TS"
@@ -84,18 +91,11 @@ jobs:
             cp "screenshots/dashboard-$TS.png" "screenshots/dashboard-latest.png"
             echo "dashboard-$TS.png" > screenshots/latest.txt
 
+            git add screenshots
+            git commit -m "Update dashboard $TS" || echo "No changes"
+            git push "https://x-access-token:${TOKEN}@github.com/JamesElemental/Reception-Dashboard.git"
+
             if [ "$i" -lt 8 ]; then
               sleep 900
             fi
           done
-
-      - name: Commit output
-        env:
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add -A screenshots
-          git commit -m "Update screenshots" || echo "No changes"
-          git push "https://x-access-token:${TOKEN}@github.com/JamesElemental/Reception-Dashboard.git"
